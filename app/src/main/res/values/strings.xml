@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">BleController</string>
+
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string name="ble_not_supported">お使いのデバイスではBLEが使用できません。</string>
+
+    <string name="btn_open_central">Central</string>
+    <string name="btn_open_peripheral">Peripheral</string>
+    <string name="title_activity_central">Central</string>
+</resources>
