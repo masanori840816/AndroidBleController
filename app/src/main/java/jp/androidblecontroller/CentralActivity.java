@@ -62,6 +62,54 @@ public class CentralActivity extends Activity {
     private Timer mTimer;
     private SendDataTimer mSendDataTimer;
 
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_central);
+
+        mIsBluetoothEnable = false;
+
+        // Writeリクエストで送信する値、Notificationで受け取った値をセットするTextView.
+        mTxtReceivedNum = (TextView) findViewById(R.id.received_num);
+        mTxtSendNum = (TextView) findViewById(R.id.send_num);
+
+        // Bluetoothの使用準備.
+        mBleManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        mBleAdapter = mBleManager.getAdapter();
+
+        // Writeリクエスト用のタイマーをセット.
+        mTimer = new Timer();
+        mSendDataTimer = new SendDataTimer();
+        // 第二引数:最初の処理までのミリ秒 第三引数:以降の処理実行の間隔(ミリ秒).
+        mTimer.schedule(mSendDataTimer, 500, 1000);
+
+        // BluetoothがOffならインテントを表示する.
+        if ((mBleAdapter == null)
+                || (! mBleAdapter.isEnabled())) {
+            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            // Intentでボタンを押すとonActivityResultが実行されるので、第二引数の番号を元に処理を行う.
+            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+        }
+        else
+        {
+            // BLEが使用可能ならスキャン開始.
+            this.scanNewDevice();
+        }
+    }
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        // Intentでユーザーがボタンを押したら実行.
+        super.onActivityResult(requestCode, resultCode, data);
+        switch (requestCode) {
+            case REQUEST_ENABLE_BT:
+                if ((mBleAdapter != null)
+                        || (mBleAdapter.isEnabled())) {
+                    // BLEが使用可能ならスキャン開始.
+                    this.scanNewDevice();
+                }
+                break;
+        }
+    }
     private final LeScanCallback mScanCallback = new BluetoothAdapter.LeScanCallback() {
         @Override
         public void onLeScan(final BluetoothDevice device, int rssi, byte[] scanRecord) {
@@ -155,58 +203,10 @@ public class CentralActivity extends Activity {
         }
     };
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_central);
 
-        mIsBluetoothEnable = false;
-
-        // Writeリクエストで送信する値、Notificationで受け取った値をセットするTextView.
-        mTxtReceivedNum = (TextView) findViewById(R.id.received_num);
-        mTxtSendNum = (TextView) findViewById(R.id.send_num);
-
-        // Bluetoothの使用準備.
-        mBleManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
-        mBleAdapter = mBleManager.getAdapter();
-
-        // Writeリクエスト用のタイマーをセット.
-        mTimer = new Timer();
-        mSendDataTimer = new SendDataTimer();
-        // 第二引数:最初の処理までのミリ秒 第三引数:以降の処理実行の間隔(ミリ秒).
-        mTimer.schedule(mSendDataTimer, 500, 1000);
-
-        // BluetoothがOffならインテントを表示する.
-        if ((mBleAdapter == null)
-                || (! mBleAdapter.isEnabled())) {
-            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            // Intentでボタンを押すとonActivityResultが実行されるので、第二引数の番号を元に処理を行う.
-            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
-        }
-        else
-        {
-            // BLEが使用可能ならスキャン開始.
-            this.scanNewDevice();
-        }
-    }
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        // Intentでユーザーがボタンを押したら実行.
-        super.onActivityResult(requestCode, resultCode, data);
-        switch (requestCode) {
-            case REQUEST_ENABLE_BT:
-                if ((mBleAdapter != null)
-                        || (mBleAdapter.isEnabled())) {
-                    // BLEが使用可能ならスキャン開始.
-                    this.scanNewDevice();
-                }
-                break;
-        }
-    }
 
     private void scanNewDevice()
     {
-
         // OS ver.5.0以上ならBluetoothLeScannerを使用する.
         if (Build.VERSION.SDK_INT >= SDKVER_LOLLIPOP)
         {
@@ -224,6 +224,7 @@ public class CentralActivity extends Activity {
     private void startScanByBleScanner()
     {
         mBleScanner = mBleAdapter.getBluetoothLeScanner();
+
         // デバイスの検出.
         mBleScanner.startScan(new ScanCallback() {
             @Override
@@ -261,8 +262,7 @@ public class CentralActivity extends Activity {
     {
         mIsBluetoothEnable = false;
 
-        if(mBleGatt != null)
-        {
+        if(mBleGatt != null) {
             mBleGatt.close();
             mBleGatt = null;
         }

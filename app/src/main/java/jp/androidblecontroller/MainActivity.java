@@ -10,6 +10,8 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 
+import jp.blecontroller.PeripheralActivity;
+
 public class MainActivity extends Activity {
 
     private Button mBtnOpenCentral;
@@ -30,6 +32,7 @@ public class MainActivity extends Activity {
         mBtnOpenCentral.setOnClickListener(mBtnOpenCentralClicked);
 
         mBtnOpenPeripheral = (Button)findViewById(R.id.btn_open_peripheral);
+        mBtnOpenPeripheral.setOnClickListener(mBtnOpenPeripheralClicked);
     }
     private final View.OnClickListener mBtnOpenCentralClicked = new View.OnClickListener() {
         @Override
@@ -41,7 +44,8 @@ public class MainActivity extends Activity {
     private final View.OnClickListener mBtnOpenPeripheralClicked = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
-            // TODO: PeripheralのActivityを開く
+            Intent ntnPeripheral = new Intent(MainActivity.this, PeripheralActivity.class);
+            startActivity(ntnPeripheral);
         }
     };
 }
