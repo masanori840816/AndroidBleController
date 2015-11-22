@@ -5,9 +5,17 @@
     <string name="action_settings">Settings</string>
     <string name="ble_not_supported">お使いのデバイスではBLEが使用できません。</string>
     <string name="advertising_not_supported">お使いのデバイスではPeripheralモードが使用できません。</string>
+    <string name="ble_connect_succeeded">接続に成功しました。</string>
 
     <string name="btn_open_central">Central</string>
     <string name="btn_open_peripheral">Peripheral</string>
     <string name="title_activity_central">Central</string>
     <string name="title_activity_peripheral">PeripheralActivity</string>
+    <string name="default_text_peripheral_got_num">Got Number</string>
+    <!-- Service UUID -->
+    <string name="uuid_service">2B1DA6DE-9C29-4D6C-A930-B990EA2F12BB</string>
+    <!-- Characteristic UUID -->
+    <string name="uuid_characteristic">7F855F82-9378-4508-A3D2-CD989104AF22</string>
+    <!-- Characteristic config UUID(fixed number) -->
+    <string name="uuid_characteristic_config">00002902-0000-1000-8000-00805f9b34fb</string>
 </resources>

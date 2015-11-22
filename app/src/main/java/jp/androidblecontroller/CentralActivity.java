@@ -23,6 +23,8 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 import android.widget.TextView;
+import android.widget.Toast;
+
 import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -30,8 +32,6 @@ import java.util.TimerTask;
 import java.util.UUID;
 
 public class CentralActivity extends Activity {
-
-    private final static int SDKVER_LOLLIPOP = 21;
 
     private final static int MESSAGE_NEW_RECEIVEDNUM = 0;
     private final static int MESSAGE_NEW_SENDNUM = 1;
@@ -169,6 +169,8 @@ public class CentralActivity extends Activity {
                         mBleGatt.writeDescriptor(descriptor);
                         // 接続が完了したらデータ送信を開始する.
                         mIsBluetoothEnable = true;
+
+                        Toast.makeText(CentralActivity.this, R.string.ble_connect_succeeded, Toast.LENGTH_SHORT).show();
                     }
                 }
             }
@@ -203,12 +205,10 @@ public class CentralActivity extends Activity {
         }
     };
 
-
-
     private void scanNewDevice()
     {
         // OS ver.5.0以上ならBluetoothLeScannerを使用する.
-        if (Build.VERSION.SDK_INT >= SDKVER_LOLLIPOP)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
         {
             this.startScanByBleScanner();
         }
@@ -216,11 +216,10 @@ public class CentralActivity extends Activity {
         {
             // デバイスの検出.
             mBleAdapter.startLeScan(mScanCallback);
-
         }
     }
 
-    @TargetApi(SDKVER_LOLLIPOP)
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private void startScanByBleScanner()
     {
         mBleScanner = mBleAdapter.getBluetoothLeScanner();

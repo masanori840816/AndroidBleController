@@ -22,7 +22,6 @@ public class MainActivity extends Activity {
     private Button mBtnOpenPeripheral;
 
     private final static int REQUEST_PERMISSIONS = 1;
-    private final static int SDKVER_MARSHMALLOW = 23;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,7 +34,7 @@ public class MainActivity extends Activity {
             finish();
         }
         // Android6.0以降なら権限確認.
-        if(Build.VERSION.SDK_INT >= SDKVER_MARSHMALLOW)
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
         {
             this.requestBlePermission();
         }
@@ -46,15 +45,11 @@ public class MainActivity extends Activity {
         mBtnOpenPeripheral = (Button)findViewById(R.id.btn_open_peripheral);
         mBtnOpenPeripheral.setOnClickListener(mBtnOpenPeripheralClicked);
     }
-    @TargetApi(SDKVER_MARSHMALLOW)
+    @TargetApi(Build.VERSION_CODES.M)
     private void requestBlePermission(){
         // 権限が許可されていない場合はリクエスト.
-        if(checkSelfPermission(Manifest.permission.BLUETOOTH) != PackageManager.PERMISSION_GRANTED
-                || checkSelfPermission(Manifest.permission.BLUETOOTH_ADMIN) != PackageManager.PERMISSION_GRANTED
-                || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){
-            requestPermissions( new String[]{
-                    Manifest.permission.BLUETOOTH, Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.ACCESS_COARSE_LOCATION
-            },REQUEST_PERMISSIONS);
+        if(checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){
+            requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},REQUEST_PERMISSIONS);
         }
     }
     @Override
@@ -70,7 +65,7 @@ public class MainActivity extends Activity {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         }
     }
-            private final View.OnClickListener mBtnOpenCentralClicked = new View.OnClickListener() {
+    private final View.OnClickListener mBtnOpenCentralClicked = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
             Intent ntnCentral = new Intent(MainActivity.this, CentralActivity.class);
