@@ -169,8 +169,6 @@ public class CentralActivity extends Activity {
                         mBleGatt.writeDescriptor(descriptor);
                         // 接続が完了したらデータ送信を開始する.
                         mIsBluetoothEnable = true;
-
-                        Toast.makeText(CentralActivity.this, R.string.ble_connect_succeeded, Toast.LENGTH_SHORT).show();
                     }
                 }
             }

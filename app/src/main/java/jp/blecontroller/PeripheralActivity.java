@@ -11,6 +11,7 @@ import android.bluetooth.BluetoothGattServer;
 import android.bluetooth.BluetoothGattServerCallback;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
+import android.bluetooth.BluetoothProfile;
 import android.bluetooth.le.AdvertiseCallback;
 import android.bluetooth.le.AdvertiseData;
 import android.bluetooth.le.AdvertiseSettings;
@@ -40,6 +41,8 @@ public class PeripheralActivity extends Activity {
     private BluetoothAdapter mBleAdapter = null;
     private BluetoothManager mBleManager = null;
     private BluetoothLeAdvertiser mBtAdvertiser;
+
+    private BluetoothGattCharacteristic mBtCharacteristic;
 
     private BluetoothGattServer mBtGattServer = null;
 
@@ -117,16 +120,17 @@ public class PeripheralActivity extends Activity {
         if(mBtAdvertiser != null){
 
             BluetoothGattService btGattService = new BluetoothGattService(UUID.fromString(getResources().getString(R.string.uuid_service)), BluetoothGattService.SERVICE_TYPE_PRIMARY);
-            BluetoothGattCharacteristic btGattCharacteristic = new BluetoothGattCharacteristic(UUID.fromString(getResources().getString(R.string.uuid_characteristic))
+
+            mBtCharacteristic = new BluetoothGattCharacteristic(UUID.fromString(getResources().getString(R.string.uuid_characteristic))
                     ,BluetoothGattCharacteristic.PROPERTY_NOTIFY | BluetoothGattCharacteristic.PROPERTY_READ | BluetoothGattCharacteristic.PROPERTY_WRITE
                     ,BluetoothGattDescriptor.PERMISSION_WRITE | BluetoothGattCharacteristic.PERMISSION_READ);
+            btGattService.addCharacteristic(mBtCharacteristic);
 
             BluetoothGattDescriptor dataDescriptor = new BluetoothGattDescriptor(
                     UUID.fromString(getResources().getString(R.string.uuid_characteristic_config))
                     ,BluetoothGattDescriptor.PERMISSION_WRITE | BluetoothGattDescriptor.PERMISSION_READ);
-            btGattCharacteristic.addDescriptor(dataDescriptor);
+            mBtCharacteristic.addDescriptor(dataDescriptor);
 
-            btGattService.addCharacteristic( btGattCharacteristic);
             mBtGattServer = mBleManager.openGattServer(this, mGattServerCallback);
             mBtGattServer.addService(btGattService);
             AdvertiseData.Builder dataBuilder=new AdvertiseData.Builder();
@@ -134,7 +138,7 @@ public class PeripheralActivity extends Activity {
             dataBuilder.setIncludeTxPowerLevel(false);
             dataBuilder.addServiceUuid(ParcelUuid.fromString(getResources().getString(R.string.uuid_service)));
             settingsBuilder.setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED);
-            settingsBuilder.setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_MEDIUM);
+            settingsBuilder.setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH);
             BluetoothLeAdvertiser bluetoothLeAdvertiser = mBleAdapter.getBluetoothLeAdvertiser();
             bluetoothLeAdvertiser.startAdvertising(settingsBuilder.build(),dataBuilder.build()
                     , new AdvertiseCallback(){
@@ -169,16 +173,15 @@ public class PeripheralActivity extends Activity {
         @Override
         public void onServiceAdded(int status, BluetoothGattService service) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                Log.d("Peripheral", "onServiceAdded status=GATT_SUCCESS service="
-                        + service.getUuid().toString());
+                Log.d("Peripheral", "service added " + service.getUuid().toString());
             } else {
-                Log.d("Peripheral", "onServiceAdded status!=GATT_SUCCESS");
+                Log.d("Peripheral", "couldn't add service");
             }
         }
         @Override
         public void onConnectionStateChange(android.bluetooth.BluetoothDevice device, int status,
                                             int newState) {
-            if(newState == 2){
+            if(newState == BluetoothProfile.STATE_CONNECTED){
                 // set connected device.
                 mConnectedDevice = device;
                 mIsConnected = true;
@@ -196,8 +199,11 @@ public class PeripheralActivity extends Activity {
                                                  int offset,
                                                  byte[] value) {
             super.onCharacteristicWriteRequest(device, requestId, characteristic, preparedWrite, responseNeeded, offset, value);
-            Log.d("Peripheral", "characteristic writeRequest " + characteristic.getStringValue(0));
 
+            // set written value to characteristic.
+            characteristic.setValue(value);
+
+            // update TextView.
             mStrReceivedNum = characteristic.getStringValue(offset);
             mHndBleHandler.sendEmptyMessage(MESSAGE_NEW_RECEIVEDNUM);
 
@@ -244,10 +250,7 @@ public class PeripheralActivity extends Activity {
     };
     private void notifyConnectedDevice() {
         // update value for connected device.
-        BluetoothGattCharacteristic readCharacteristic = mBtGattServer.getService(UUID.fromString(getResources().getString(R.string.uuid_service)))
-                .getCharacteristic(UUID.fromString(getResources().getString(R.string.uuid_characteristic)));
-        readCharacteristic.setValue(mStrUpdateNum);
-        mBtGattServer.notifyCharacteristicChanged(mConnectedDevice, readCharacteristic, false);
-
+        mBtCharacteristic.setValue(mStrUpdateNum);
+        mBtGattServer.notifyCharacteristicChanged(mConnectedDevice, mBtCharacteristic, false);
     }
 }
