@@ -13,8 +13,6 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 
-import jp.blecontroller.PeripheralActivity;
-
 public class MainActivity extends Activity {
 
     private final static int REQUEST_PERMISSIONS = 1;

@@ -29,7 +29,7 @@
             android:label="@string/title_activity_central" >
         </activity>
         <activity
-            android:name="jp.blecontroller.PeripheralActivity"
+            android:name=".PeripheralActivity"
             android:label="@string/title_activity_peripheral" >
         </activity>
     </application>

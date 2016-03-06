@@ -1,4 +1,4 @@
-package jp.blecontroller;
+package jp.androidblecontroller;
 
 import android.annotation.TargetApi;
 import android.app.Activity;

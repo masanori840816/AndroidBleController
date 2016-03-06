@@ -8,10 +8,6 @@ Controlling Bluetooth Low Energy of Android devices.
 ## Licence
 [MIT](https://github.com/tcnksm/tool/blob/master/LICENCE)
 
-### Lightweight-Stream-API
-* Project: https://github.com/aNNiMON/Lightweight-Stream-API
-* License: Apache License Version2.0(https://github.com/aNNiMON/Lightweight-Stream-API/blob/master/LICENSE)
-
 ### Gradle Retrolambda Plugin
 * Project: https://github.com/evant/gradle-retrolambda
 * License: Apache License Version2.0(https://github.com/evant/gradle-retrolambda/blob/master/LICENSE.txt)
