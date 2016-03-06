@@ -11,14 +11,14 @@
         android:layout_height="wrap_content"
         android:text="@string/btn_open_central"
         android:id="@+id/btn_open_central"
-        android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="191dp" />
+        android:layout_centerVertical="true"
+        android:layout_alignParentStart="true" />
 
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/btn_open_peripheral"
         android:id="@+id/btn_open_peripheral"
-        android:layout_marginTop="104dp" />
+        android:layout_centerVertical="true"
+        android:layout_alignParentEnd="true" />
 </RelativeLayout>

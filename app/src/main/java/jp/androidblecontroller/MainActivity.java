@@ -9,7 +9,6 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.support.v4.app.ActivityCompat;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
@@ -18,10 +17,8 @@ import jp.blecontroller.PeripheralActivity;
 
 public class MainActivity extends Activity {
 
-    private Button mBtnOpenCentral;
-    private Button mBtnOpenPeripheral;
-
     private final static int REQUEST_PERMISSIONS = 1;
+    private boolean isPermissionAllowed;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,21 +31,35 @@ public class MainActivity extends Activity {
             finish();
         }
         // Android6.0以降なら権限確認.
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-        {
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M){
+            isPermissionAllowed = false;
             this.requestBlePermission();
         }
+        else{
+            isPermissionAllowed = true;
+        }
 
-        mBtnOpenCentral = (Button)findViewById(R.id.btn_open_central);
-        mBtnOpenCentral.setOnClickListener(mBtnOpenCentralClicked);
+        Button btnOpenCentral = (Button)findViewById(R.id.btn_open_central);
+        btnOpenCentral.setOnClickListener((View v) ->{
+                if(isPermissionAllowed) {
+                    startActivity(new Intent(MainActivity.this, CentralActivity.class));
+                }
+            });
 
-        mBtnOpenPeripheral = (Button)findViewById(R.id.btn_open_peripheral);
-        mBtnOpenPeripheral.setOnClickListener(mBtnOpenPeripheralClicked);
+        Button btnOpenPeripheral = (Button)findViewById(R.id.btn_open_peripheral);
+        btnOpenPeripheral.setOnClickListener((View v) -> {
+            if (isPermissionAllowed) {
+                startActivity(new Intent(MainActivity.this, PeripheralActivity.class));
+            }
+        });
     }
     @TargetApi(Build.VERSION_CODES.M)
     private void requestBlePermission(){
         // 権限が許可されていない場合はリクエスト.
-        if(checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){
+        if(checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            isPermissionAllowed = true;
+        }
+        else{
             requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},REQUEST_PERMISSIONS);
         }
     }
@@ -57,26 +68,10 @@ public class MainActivity extends Activity {
         // 権限リクエストの結果を取得する.
         if (requestCode == REQUEST_PERMISSIONS) {
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(MainActivity.this, "Succeed", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(MainActivity.this, "Failed", Toast.LENGTH_SHORT).show();
+                isPermissionAllowed = true;
             }
         }else {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         }
     }
-    private final View.OnClickListener mBtnOpenCentralClicked = new View.OnClickListener() {
-        @Override
-        public void onClick(View v) {
-            Intent ntnCentral = new Intent(MainActivity.this, CentralActivity.class);
-            startActivity(ntnCentral);
-        }
-    };
-    private final View.OnClickListener mBtnOpenPeripheralClicked = new View.OnClickListener() {
-        @Override
-        public void onClick(View v) {
-            Intent ntnPeripheral = new Intent(MainActivity.this, PeripheralActivity.class);
-            startActivity(ntnPeripheral);
-        }
-    };
 }
