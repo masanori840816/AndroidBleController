@@ -12,6 +12,9 @@
     <string name="title_activity_central">Central</string>
     <string name="title_activity_peripheral">PeripheralActivity</string>
     <string name="default_text_peripheral_got_num">Got Number</string>
+    <string name="request_ble_on">1</string>
+    <string name="request_enable_location">2</string>
+    <string name="error_title">Error</string>
     <!-- Service UUID -->
     <string name="uuid_service">2B1DA6DE-9C29-4D6C-A930-B990EA2F12BB</string>
     <!-- Characteristic UUID -->

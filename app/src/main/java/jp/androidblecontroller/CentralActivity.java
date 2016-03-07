@@ -6,7 +6,6 @@ import android.bluetooth.le.*;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothAdapter.LeScanCallback;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
@@ -19,9 +18,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
+import android.support.v4.app.FragmentActivity;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -31,67 +32,79 @@ import java.util.TimerTask;
 
 import java.util.UUID;
 
-public class CentralActivity extends Activity {
+public class CentralActivity extends FragmentActivity implements IBleActivity{
+    public class SendDataTimer extends TimerTask {
+        @Override
+        public void run() {
+            if (isBleEnabled) {
+                String sendValue = String.valueOf(random.nextInt(1000));
+                // UIスレッドで生成した数をTextViewにセット.
+                runOnUiThread(
+                        () -> {
+                            sendValueView.setText(sendValue);
+                        });
+                // Characteristicにランダムな値をセットして、Writeリクエストを送信.
+                bleCharacteristic.setValue(sendValue);
+                bleGatt.writeCharacteristic(bleCharacteristic);
+            }
+        }
+    }
+    private final static LocationAccesser locationAccesser = new LocationAccesser();
 
-    private final static int MESSAGE_NEW_RECEIVEDNUM = 0;
-    private final static int MESSAGE_NEW_SENDNUM = 1;
+    private BluetoothManager bleManager;
+    private BluetoothAdapter bleAdapter;
+    private boolean isBleEnabled = false;
+    private BluetoothLeScanner bleScanner;
+    private BluetoothGatt bleGatt;
+    private BluetoothGattCharacteristic bleCharacteristic;
 
-    private final static int REQUEST_ENABLE_BT = 123456;
-    private BluetoothManager mBleManager;
-    private BluetoothAdapter mBleAdapter;
-    private boolean mIsBluetoothEnable = false;
-    private BluetoothLeScanner mBleScanner;
-    private BluetoothGatt mBleGatt;
-    private BluetoothGattCharacteristic mBleCharacteristic;
-
-    private TextView mTxtReceivedNum;
-    private TextView mTxtSendNum;
-
-    private String mStrReceivedNum = "";
-    private String mStrSendNum = "";
-
-    // 対象のサービスUUID.
-    private static final String SERVICE_UUID = "2B1DA6DE-9C29-4D6C-A930-B990EA2F12BB";
-    // キャラクタリスティックUUID.
-    private static final String CHARACTERISTIC_UUID = "7F855F82-9378-4508-A3D2-CD989104AF22";
-    // キャラクタリスティック設定UUID(固定値).
-    private static final String CHARACTERISTIC_CONFIG_UUID = "00002902-0000-1000-8000-00805f9b34fb";
+    private TextView receivedValueView;
+    private TextView sendValueView;
 
     // 乱数送信用.
-    private Random mRandom = new Random();
-    private Timer mTimer;
-    private SendDataTimer mSendDataTimer;
+    private Random random = new Random();
+    private Timer timer;
+    private SendDataTimer sendDataTimer;
 
+    public void onGpsIsEnabled(){
+        // 2016.03.07現在GPSを要求するのが6.0以降のみなのでOnになったら新しいAPIでScan開始.
+        this.startScanByBleScanner();
+    }
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_central);
 
-        mIsBluetoothEnable = false;
+        isBleEnabled = false;
 
         // Writeリクエストで送信する値、Notificationで受け取った値をセットするTextView.
-        mTxtReceivedNum = (TextView) findViewById(R.id.received_num);
-        mTxtSendNum = (TextView) findViewById(R.id.send_num);
+        receivedValueView = (TextView) findViewById(R.id.received_value_view);
+        sendValueView = (TextView) findViewById(R.id.send_value_view);
 
         // Bluetoothの使用準備.
-        mBleManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
-        mBleAdapter = mBleManager.getAdapter();
+        bleManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        bleAdapter = bleManager.getAdapter();
 
         // Writeリクエスト用のタイマーをセット.
-        mTimer = new Timer();
-        mSendDataTimer = new SendDataTimer();
+        timer = new Timer();
+        sendDataTimer = new SendDataTimer();
         // 第二引数:最初の処理までのミリ秒 第三引数:以降の処理実行の間隔(ミリ秒).
-        mTimer.schedule(mSendDataTimer, 500, 1000);
+        timer.schedule(sendDataTimer, 500, 1000);
 
+        Button sendButton = (Button) findViewById(R.id.send_button);
+        sendButton.setOnClickListener((View v) ->{
+            if(isBleEnabled){
+                bleCharacteristic.setValue(((EditText) findViewById(R.id.input_area)).getText().toString());
+                bleGatt.writeCharacteristic(bleCharacteristic);
+            }
+        });
         // BluetoothがOffならインテントを表示する.
-        if ((mBleAdapter == null)
-                || (! mBleAdapter.isEnabled())) {
-            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+        if ((bleAdapter == null)
+                || (! bleAdapter.isEnabled())) {
             // Intentでボタンを押すとonActivityResultが実行されるので、第二引数の番号を元に処理を行う.
-            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+            startActivityForResult(new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE), R.string.request_ble_on);
         }
-        else
-        {
+        else{
             // BLEが使用可能ならスキャン開始.
             this.scanNewDevice();
         }
@@ -101,168 +114,114 @@ public class CentralActivity extends Activity {
         // Intentでユーザーがボタンを押したら実行.
         super.onActivityResult(requestCode, resultCode, data);
         switch (requestCode) {
-            case REQUEST_ENABLE_BT:
-                if ((mBleAdapter != null)
-                        || (mBleAdapter.isEnabled())) {
+            case R.string.request_ble_on:
+                if ((bleAdapter != null)
+                        || (bleAdapter.isEnabled())) {
                     // BLEが使用可能ならスキャン開始.
                     this.scanNewDevice();
                 }
                 break;
+            case R.string.request_enable_location:
+                if(resultCode == RESULT_OK){
+                    onGpsIsEnabled();
+                }
+                break;
         }
     }
-    private final LeScanCallback mScanCallback = new BluetoothAdapter.LeScanCallback() {
+    private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback(){
         @Override
-        public void onLeScan(final BluetoothDevice device, int rssi, byte[] scanRecord) {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    // スキャン中に見つかったデバイスに接続を試みる.第三引数には接続後に呼ばれるBluetoothGattCallbackを指定する.
-                    mBleGatt = device.connectGatt(getApplicationContext(), false, mGattCallback);
-                }
-            });
-        }
-    };
-    private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
-        @Override
-        public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState)
-        {
+        public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState){
             // 接続状況が変化したら実行.
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 // 接続に成功したらサービスを検索する.
                 gatt.discoverServices();
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 // 接続が切れたらGATTを空にする.
-                if (mBleGatt != null)
-                {
-                    mBleGatt.close();
-                    mBleGatt = null;
+                if (bleGatt != null){
+                    bleGatt.close();
+                    bleGatt = null;
                 }
-                mIsBluetoothEnable = false;
+                isBleEnabled = false;
             }
         }
         @Override
-        public void onServicesDiscovered(BluetoothGatt gatt, int status)
-        {
+        public void onServicesDiscovered(BluetoothGatt gatt, int status){
             // Serviceが見つかったら実行.
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 // UUIDが同じかどうかを確認する.
-                BluetoothGattService service = gatt.getService(UUID.fromString(SERVICE_UUID));
-                if (service != null)
-                {
+                BluetoothGattService bleService = gatt.getService(UUID.fromString(getString(R.string.uuid_service)));
+                if (bleService != null){
                     // 指定したUUIDを持つCharacteristicを確認する.
-                    mBleCharacteristic = service.getCharacteristic(UUID.fromString(CHARACTERISTIC_UUID));
-
-                    if (mBleCharacteristic != null) {
-
+                    bleCharacteristic = bleService.getCharacteristic(UUID.fromString(getString(R.string.uuid_characteristic)));
+                    if (bleCharacteristic != null) {
                         // Service, CharacteristicのUUIDが同じならBluetoothGattを更新する.
-                        mBleGatt = gatt;
-
+                        bleGatt = gatt;
                         // キャラクタリスティックが見つかったら、Notificationをリクエスト.
-                        boolean registered = mBleGatt.setCharacteristicNotification(mBleCharacteristic, true);
+                        bleGatt.setCharacteristicNotification(bleCharacteristic, true);
 
                         // Characteristic の Notificationを有効化する.
-                        BluetoothGattDescriptor descriptor = mBleCharacteristic.getDescriptor(
-                                UUID.fromString(CHARACTERISTIC_CONFIG_UUID));
-
-
-                        descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-                        mBleGatt.writeDescriptor(descriptor);
+                        BluetoothGattDescriptor bleDescriptor = bleCharacteristic.getDescriptor(
+                                UUID.fromString(getString(R.string.uuid_characteristic_config)));
+                        bleDescriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+                        bleGatt.writeDescriptor(bleDescriptor);
                         // 接続が完了したらデータ送信を開始する.
-                        mIsBluetoothEnable = true;
+                        isBleEnabled = true;
                     }
                 }
             }
         }
         @Override
-        public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic)
-        {
+        public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic){
             // キャラクタリスティックのUUIDをチェック(getUuidの結果が全て小文字で帰ってくるのでUpperCaseに変換)
-            if (CHARACTERISTIC_UUID.equals(characteristic.getUuid().toString().toUpperCase()))
-            {
-                // Peripheralで値が更新されたらNotificationを受ける.
-                mStrReceivedNum = characteristic.getStringValue(0);
-                // メインスレッドでTextViewに値をセットする.
-                mBleHandler.sendEmptyMessage(MESSAGE_NEW_RECEIVEDNUM);
+            if (getString(R.string.uuid_characteristic).equals(characteristic.getUuid().toString().toUpperCase())){
+                runOnUiThread(
+                        () -> {
+                            // Peripheral側で更新された値をセットする.
+                            receivedValueView.setText(characteristic.getStringValue(0));
+                        });
             }
         }
     };
-    private Handler mBleHandler = new Handler()
-    {
-        public void handleMessage(Message msg)
-        {
-            // UIスレッドで実行する処理.
-            switch (msg.what)
-            {
-                case MESSAGE_NEW_RECEIVEDNUM:
-                    mTxtReceivedNum.setText(mStrReceivedNum);
-                    break;
-                case MESSAGE_NEW_SENDNUM:
-                    mTxtSendNum.setText(mStrSendNum);
-                    break;
-            }
+    private void scanNewDevice(){
+        // OS ver.6.0以上ならGPSがOnになっているかを確認する(GPSがOffだとScanに失敗するため).
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M){
+            locationAccesser.checkIsGpsOn(this, this);
         }
-    };
-
-    private void scanNewDevice()
-    {
         // OS ver.5.0以上ならBluetoothLeScannerを使用する.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
-        {
+        else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP){
             this.startScanByBleScanner();
         }
-        else
-        {
+        else{
             // デバイスの検出.
-            mBleAdapter.startLeScan(mScanCallback);
+            // BluetoothAdapter.LeScanCallback() - onLeScan(final BluetoothDevice device, int rssi, byte[] scanRecord).
+            bleAdapter.startLeScan(
+                (final BluetoothDevice device, int rssi, byte[] scanRecord) -> {
+                runOnUiThread(
+                        () -> {
+                        // スキャン中に見つかったデバイスに接続を試みる.第三引数には接続後に呼ばれるBluetoothGattCallbackを指定する.
+                        bleGatt = device.connectGatt(getApplicationContext(), false, mGattCallback);
+                    });
+                });
         }
     }
-
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    private void startScanByBleScanner()
-    {
-        mBleScanner = mBleAdapter.getBluetoothLeScanner();
+    private void startScanByBleScanner(){
+        bleScanner = bleAdapter.getBluetoothLeScanner();
 
         // デバイスの検出.
-        mBleScanner.startScan(new ScanCallback() {
+        bleScanner.startScan(new ScanCallback() {
             @Override
             public void onScanResult(int callbackType, ScanResult result) {
                 super.onScanResult(callbackType, result);
                 // スキャン中に見つかったデバイスに接続を試みる.第三引数には接続後に呼ばれるBluetoothGattCallbackを指定する.
                 result.getDevice().connectGatt(getApplicationContext(), false, mGattCallback);
             }
+
             @Override
-            public void onScanFailed(int intErrorCode)
-            {
+            public void onScanFailed(int intErrorCode) {
                 super.onScanFailed(intErrorCode);
             }
         });
     }
 
-
-    public class SendDataTimer extends TimerTask{
-        @Override
-        public void run() {
-            if(mIsBluetoothEnable)
-            {
-                // 設定時間ごとに0~999までの乱数を作成.
-                mStrSendNum = String.valueOf(mRandom.nextInt(1000));
-                // UIスレッドで生成した数をTextViewにセット.
-                mBleHandler.sendEmptyMessage(MESSAGE_NEW_SENDNUM);
-                // キャラクタリスティックに値をセットして、Writeリクエストを送信.
-                mBleCharacteristic.setValue(mStrSendNum);
-                mBleGatt.writeCharacteristic(mBleCharacteristic);
-            }
-        }
-    }
-    @Override
-    protected void onDestroy()
-    {
-        mIsBluetoothEnable = false;
-
-        if(mBleGatt != null) {
-            mBleGatt.close();
-            mBleGatt = null;
-        }
-        super.onDestroy();
-    }
 }

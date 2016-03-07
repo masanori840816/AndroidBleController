@@ -9,18 +9,47 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="New Text"
-        android:id="@+id/received_num"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="Received"
+        android:id="@+id/received_value_view"
         android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="164dp" />
+        android:layout_alignParentStart="true"
+        android:layout_marginTop="55dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="Send"
+        android:id="@+id/send_value_view"
+        android:layout_below="@+id/received_value_view"
+        android:layout_alignParentStart="true"
+        android:layout_marginTop="34dp" />
+
+    <ToggleButton
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Auto"
+        android:id="@+id/auto_toggle"
+        android:layout_centerVertical="true"
+        android:layout_alignParentStart="true" />
 
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="New Button"
-        android:id="@+id/send_num"
-        android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true"
-        android:layout_marginBottom="102dp" />
+        android:text="Send"
+        android:id="@+id/send_button"
+        android:layout_centerVertical="true"
+        android:layout_alignParentEnd="true" />
+
+    <EditText
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:inputType="textMultiLine"
+        android:ems="10"
+        android:id="@+id/input_area"
+        android:layout_alignTop="@+id/received_value_view"
+        android:layout_toEndOf="@+id/received_value_view"
+        android:layout_marginStart="71dp"
+        android:layout_alignBottom="@+id/send_value_view" />
 </RelativeLayout>
